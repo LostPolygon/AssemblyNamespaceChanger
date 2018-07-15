@@ -1,0 +1,43 @@
+﻿using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.Text;
+using System.Threading;
+using System.Xml;
+using log4net;
+using log4net.Config;
+
+namespace LostPolygon.AssemblyNamespaceChanger
+{
+    internal class Program {
+        private static readonly ILog Log = LogManager.GetLogger("AssemblyNamespaceChanger");
+
+        public static void Main(params string[] args) {
+            Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+            Console.OutputEncoding = Encoding.Unicode;
+            if (!Debugger.IsAttached) {
+                AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionTrapper;
+            }
+
+            SetupLog4Net();
+            AssemblyNamespaceChanger.Run(args);
+        }
+
+        private static void UnhandledExceptionTrapper(object sender, UnhandledExceptionEventArgs e) {
+            Log.Fatal(
+                "Fatal error:" + Environment.NewLine +
+                ((Exception) e.ExceptionObject) + Environment.NewLine +
+                ((Exception) e.ExceptionObject).InnerException
+            );
+            Environment.Exit(1);
+        }
+
+        private static void SetupLog4Net() {
+            XmlDocument objDocument = new XmlDocument();
+            objDocument.LoadXml(Resources.Resources.log4netConfiguration);
+            XmlElement objElement = objDocument.DocumentElement;
+
+            XmlConfigurator.Configure(objElement);
+        }
+    }
+}
