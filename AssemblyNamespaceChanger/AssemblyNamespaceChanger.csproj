@@ -87,10 +87,10 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent Condition=" '$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT' ">
-      "%UserProfile%\.nuget\packages\ILRepack\2.0.15\tools\ilrepack" /out:LostPolygon.AssemblyNamespaceChanger.Packed.exe LostPolygon.AssemblyNamespaceChanger.exe CommandLine.dll log4net.dll Mono.Cecil.dll Mono.Cecil.Mdb.dll Mono.Cecil.Pdb.dll Mono.Cecil.Rocks.dll /internalize
+      "%UserProfile%\.nuget\packages\ILRepack\2.0.15\tools\ilrepack" /out:LostPolygon.AssemblyNamespaceChanger.Packed.exe LostPolygon.AssemblyNamespaceChanger.exe CommandLine.dll log4net.dll Mono.Cecil.dll Mono.Cecil.Mdb.dll Mono.Cecil.Pdb.dll Mono.Cecil.Rocks.dll System.ValueTuple.dll /internalize
     </PostBuildEvent>
     <PostBuildEvent Condition=" '$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT' ">
-      mono "~/.nuget/packages/ILRepack/2.0.15/tools/ILRepack.exe" /out:LostPolygon.AssemblyNamespaceChanger.Packed.exe LostPolygon.AssemblyNamespaceChanger.exe CommandLine.dll log4net.dll Mono.Cecil.dll Mono.Cecil.Mdb.dll Mono.Cecil.Pdb.dll Mono.Cecil.Rocks.dll /internalize
+      mono "~/.nuget/packages/ILRepack/2.0.15/tools/ILRepack.exe" /out:LostPolygon.AssemblyNamespaceChanger.Packed.exe LostPolygon.AssemblyNamespaceChanger.exe CommandLine.dll log4net.dll Mono.Cecil.dll Mono.Cecil.Mdb.dll Mono.Cecil.Pdb.dll Mono.Cecil.Rocks.dll System.ValueTuple.dll /internalize
     </PostBuildEvent>
   </PropertyGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
