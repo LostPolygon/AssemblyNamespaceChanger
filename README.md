@@ -15,5 +15,5 @@ Console utility to search/replace namespaces in .NET assemblies.
 
 ## Usage example
 ```
-LostPolygon.AssemblyNamespaceChanger --input InputAssembly.dll --output Output/OutputAssembly.dll --regexps ^Foo:Bar.Foo:^Namespace1.Test:Namespace2:Whatever
+LostPolygon.AssemblyNamespaceChanger --input InputAssembly.dll --output Output/OutputAssembly.dll --regexps ^Foo:Bar.Foo:^Namespace1.Test:Namespace2.Whatever
 ```
