@@ -78,7 +78,8 @@ namespace LostPolygon.AssemblyNamespaceChanger.Resources {
         ///    &lt;/mapping&gt;
         ///    &lt;mapping&gt;
         ///      &lt;level value=&quot;ERROR&quot; /&gt;
-        ///      &lt;forecolor value=&quot;D [rest of string was truncated]&quot;;.
+        ///      &lt;forecolor value=&quot;DarkRed&quot; /&gt;
+        ///    &lt;/ [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string log4netConfiguration {
             get {
