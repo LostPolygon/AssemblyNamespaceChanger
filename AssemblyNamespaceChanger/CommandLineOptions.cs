@@ -4,7 +4,7 @@ using CommandLine.Text;
 
 namespace LostPolygon.AssemblyNamespaceChanger
 {
-    class CommandLineOptions
+    public class CommandLineOptions
     {
         [Option('i', "input", Required = true, HelpText = "Input assembly path.")]
         public string InputAssemblyPath { get; set; }
@@ -17,6 +17,9 @@ namespace LostPolygon.AssemblyNamespaceChanger
                 "First consequential one is the search pattern, " +
                 "second is the replacement pattern. Separated by semicolon (:)")]
         public IEnumerable<string> Regexps { get; set; }
+
+        [Option("replace-references", HelpText = "Whether to apply search/replace to assembly references. Default is off.")]
+        public bool ReplaceAssemblyReferences { get; set; }
 
         [Usage(ApplicationAlias = "LostPolygon.AssemblyNamespaceChanger")]
         public static IEnumerable<Example> Examples {

@@ -1,4 +1,7 @@
-﻿namespace Nice
+﻿using System.Net;
+using System.Web.ModelBinding;
+
+namespace Nice
 {
     public class Foo
     {
@@ -11,7 +14,8 @@
 namespace Neat {
     namespace Cool {
         public struct Awesome {
-
+            public void Foo([Cookie] string cookie) {
+            }
         }
     }
 }

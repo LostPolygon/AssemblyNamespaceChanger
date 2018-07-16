@@ -60,6 +60,9 @@ namespace LostPolygon.AssemblyNamespaceChanger {
 
             Log.Info($"Reading assembly from {_commandLineOptions.InputAssemblyPath}");
             AssemblyDefinition assembly = Mono.Cecil.AssemblyDefinition.ReadAssembly(_commandLineOptions.InputAssemblyPath);
+
+            Log.Info("Modifying types");
+
             TypeDefinition[] types = assembly.MainModule.GetTypes().ToArray();
             int modifiedTypes = 0;
             foreach (TypeDefinition type in types) {
@@ -75,6 +78,42 @@ namespace LostPolygon.AssemblyNamespaceChanger {
             }
 
             Log.Info($"Modified {modifiedTypes} type(s)");
+
+            Log.Info("Modifying type references");
+
+            int modifiedTypeReferences = 0;
+            foreach (TypeReference typeReference in assembly.MainModule.GetTypeReferences()) {
+                string originalNamespace = typeReference.Namespace;
+                foreach ((Regex pattern, string replacement) replacementPattern in replacementPatterns) {
+                    typeReference.Namespace =
+                        replacementPattern.pattern.Replace(typeReference.Namespace, replacementPattern.replacement);
+                }
+
+                if (originalNamespace != typeReference.Namespace) {
+                    modifiedTypeReferences++;
+                }
+            }
+
+            Log.Info($"Modified {modifiedTypeReferences} type reference(s)");
+
+            if (_commandLineOptions.ReplaceAssemblyReferences) {
+                Log.Info("Modifying assembly references");
+
+                int modifiedReferences = 0;
+                foreach (AssemblyNameReference assemblyReference in assembly.MainModule.AssemblyReferences) {
+                    string originalName = assemblyReference.Name;
+                    foreach ((Regex pattern, string replacement) replacementPattern in replacementPatterns) {
+                        assemblyReference.Name =
+                            replacementPattern.pattern.Replace(assemblyReference.Name, replacementPattern.replacement);
+                    }
+
+                    if (originalName != assemblyReference.Name) {
+                        modifiedReferences++;
+                    }
+                }
+
+                Log.Info($"Modified {modifiedReferences} assembly reference(s)");
+            }
 
             string outputPath;
             if (!String.IsNullOrWhiteSpace(_commandLineOptions.OutputAssemblyPath)) {
