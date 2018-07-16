@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -59,7 +60,19 @@ namespace LostPolygon.AssemblyNamespaceChanger {
             }
 
             Log.Info($"Reading assembly from {_commandLineOptions.InputAssemblyPath}");
-            AssemblyDefinition assembly = Mono.Cecil.AssemblyDefinition.ReadAssembly(_commandLineOptions.InputAssemblyPath);
+            AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(_commandLineOptions.InputAssemblyPath);
+
+            if (_commandLineOptions.ReplaceAssemblyName) {
+                string originalName = assembly.Name.Name;
+                foreach ((Regex pattern, string replacement) replacementPattern in replacementPatterns) {
+                    assembly.Name.Name =
+                        replacementPattern.pattern.Replace(assembly.Name.Name, replacementPattern.replacement);
+                }
+
+                if (originalName != assembly.Name.Name) {
+                    Log.Info("Assembly name modified");
+                }
+            }
 
             Log.Info("Modifying types");
 

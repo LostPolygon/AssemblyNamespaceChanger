@@ -21,6 +21,9 @@ namespace LostPolygon.AssemblyNamespaceChanger
         [Option("replace-references", HelpText = "Whether to apply search/replace to assembly references. Default is off.")]
         public bool ReplaceAssemblyReferences { get; set; }
 
+        [Option("replace-assembly-name", HelpText = "Whether to apply search/replace to assembly name. Default is off.")]
+        public bool ReplaceAssemblyName { get; set; }
+
         [Usage(ApplicationAlias = "LostPolygon.AssemblyNamespaceChanger")]
         public static IEnumerable<Example> Examples {
             get {
