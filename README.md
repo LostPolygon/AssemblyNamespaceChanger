@@ -10,7 +10,13 @@ Console utility to search/replace namespaces in .NET assemblies.
 
   -r, --regexps    Required. Array of regexp search and replace patterns. First
                    consequential one is the search pattern, second is the
-                   replacement pattern. Separated by semicolon (:)
+                   replacement pattern. Separated by colon (:)
+
+  --replace-references       Whether to apply search/replace to assembly
+                             references. Default is off.
+
+  --replace-assembly-name    Whether to apply search/replace to assembly name.
+                             Default is off.
 ```
 
 ## Usage example

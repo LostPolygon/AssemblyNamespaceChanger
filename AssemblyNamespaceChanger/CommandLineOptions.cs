@@ -15,7 +15,7 @@ namespace LostPolygon.AssemblyNamespaceChanger
         [Option('r', "regexps", Separator=':', Required = true,
             HelpText = "Array of regexp search and replace patterns. " +
                 "First consequential one is the search pattern, " +
-                "second is the replacement pattern. Separated by semicolon (:)")]
+                "second is the replacement pattern. Separated by colon (:)")]
         public IEnumerable<string> Regexps { get; set; }
 
         [Option("replace-references", HelpText = "Whether to apply search/replace to assembly references. Default is off.")]
