@@ -150,18 +150,28 @@ namespace LostPolygon.AssemblyNamespaceChanger {
             int modifiedAttributesParameters = 0;
             bool isAttributeModified = false;
 
-            void UpdateTypeDefOrRefSig(TypeDefOrRefSig type) {
-                if (type.IsTypeDef) {
-                    type.TypeDef.Namespace = UpdateName(type.Namespace, () => isAttributeModified = true);
+            void UpdateAttributeConstructorArgument(object argument) {
+                switch (argument) {
+                    case TypeDefOrRefSig type:
+                        if (type.IsTypeDef) {
+                            type.TypeDef.Namespace = UpdateName(type.Namespace, () => isAttributeModified = true);
 
-                    if (type.TypeDef.Scope is AssemblyRefUser assemblyRefUser) {
-                        assemblyRefUser.Name = UpdateName(assemblyRefUser.Name, () => isAttributeModified = true);
-                    }
-                } else if (type.IsTypeRef) {
-                    type.TypeRef.Namespace = UpdateName(type.Namespace, () => isAttributeModified = true);
-                    if (type.TypeRef.Scope is AssemblyRefUser assemblyRefUser) {
-                        assemblyRefUser.Name = UpdateName(assemblyRefUser.Name, () => isAttributeModified = true);
-                    }
+                            if (type.TypeDef.Scope is AssemblyRefUser assemblyRefUser) {
+                                assemblyRefUser.Name = UpdateName(assemblyRefUser.Name, () => isAttributeModified = true);
+                            }
+                        } else if (type.IsTypeRef) {
+                            type.TypeRef.Namespace = UpdateName(type.Namespace, () => isAttributeModified = true);
+                            if (type.TypeRef.Scope is AssemblyRefUser assemblyRefUser) {
+                                assemblyRefUser.Name = UpdateName(assemblyRefUser.Name, () => isAttributeModified = true);
+                            }
+                        }
+                        break;
+                    case GenericInstSig genericInstSig:
+                        foreach (TypeSig genericArgument in genericInstSig.GenericArguments) {
+                            UpdateAttributeConstructorArgument(genericArgument);
+                        }
+                        UpdateAttributeConstructorArgument(genericInstSig.GenericType);
+                        break;
                 }
             }
 
@@ -171,13 +181,8 @@ namespace LostPolygon.AssemblyNamespaceChanger {
                     customAttribute.ConstructorArguments.Concat(customAttribute.NamedArguments.Select(na => na.Argument));
 
                 foreach (CAArgument attributeConstructorArgument in constructorArguments) {
-                    if (attributeConstructorArgument.Type is TypeDefOrRefSig typeType) {
-                        UpdateTypeDefOrRefSig(typeType);
-                    }
-
-                    if (attributeConstructorArgument.Value is TypeDefOrRefSig valueType) {
-                        UpdateTypeDefOrRefSig(valueType);
-                    }
+                    UpdateAttributeConstructorArgument(attributeConstructorArgument.Type);
+                    UpdateAttributeConstructorArgument(attributeConstructorArgument.Value);
                 }
 
                 if (isAttributeModified) {
@@ -185,7 +190,7 @@ namespace LostPolygon.AssemblyNamespaceChanger {
                 }
             }
 
-            Log.Info($"Modified {modifiedAttributesParameters} attribute parameter(s)");
+            Log.Info($"Modified {modifiedAttributesParameters} attribute(s)");
 
             string outputPath;
             if (!String.IsNullOrWhiteSpace(_commandLineOptions.OutputAssemblyPath)) {
