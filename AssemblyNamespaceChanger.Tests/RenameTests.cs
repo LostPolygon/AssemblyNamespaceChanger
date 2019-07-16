@@ -33,21 +33,19 @@ namespace AssemblyNamespaceChanger.Tests {
                 });
 
 
-            ProcessStartInfo info = new ProcessStartInfo(
-                Path.Combine(TestContext.CurrentContext.TestDirectory, "LostPolygon.AssemblyNamespaceChanger.exe")
-                );
-            info.Arguments =
+            string arguments =
                 commandLineParser.FormatCommandLine(
                     new CommandLineOptions {
                         InputAssemblyPath = inputAsmPath,
                         OutputAssemblyPath = outputAsmPath,
                         ReplaceAssemblyReferences = true,
                         Regexps = new []{ "^Neat", "Test", "^System.Web", "Foo.System.Web" }
-                    });;
+                    });
 
-            Process process = Process.Start(info);
-            process.WaitForExit();
-            Assert.AreEqual(0, process.ExitCode);
+            string[] argumentsSplit = arguments.Split(' ');
+
+
+            LostPolygon.AssemblyNamespaceChanger.AssemblyNamespaceChanger.Run(argumentsSplit);
 
             AssemblyDefinition output = AssemblyDefinition.ReadAssembly(outputAsmPath);
             output.AssertNoClass("Neat.Cool.Awesome");
