@@ -81,52 +81,15 @@ namespace LostPolygon.AssemblyNamespaceChanger {
             TypeRef[] typeReferences = module.GetTypeRefs().ToArray();
             AssemblyRef[] assemblyReferences = module.GetAssemblyRefs().ToArray();
 
-            Log.Info("Updating attributes");
-
-            HashSet<CustomAttribute> customAttributes = new HashSet<CustomAttribute>();
-            customAttributes.UnionWith(module.CustomAttributes);
-            customAttributes.UnionWith(assembly.CustomAttributes);
-
-            foreach (TypeDef type in types) {
-                customAttributes.UnionWith(type.CustomAttributes);
-                type.Events.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
-                type.Fields.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
-                type.Interfaces.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
-                type.Methods.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
-                type.GenericParameters.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
-                type.Properties.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
-
-                foreach (MethodDef method in type.Methods) {
-                    method.GenericParameters.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
-                    method.Parameters.ToList().ForEach(m => {
-                        if (m.HasParamDef)
-                        {
-                            customAttributes.UnionWith(m.ParamDef.CustomAttributes);
-                        }
-                    });
-                }
-            }
-
-            int modifiedAttributesParameters = 0;
-            foreach (CustomAttribute customAttribute in customAttributes) {
-                foreach (CAArgument attributeConstructorArgument in customAttribute.ConstructorArguments) {
-                    if (attributeConstructorArgument.Value is TypeDefOrRefSig typeDefOrRefSig) {
-                        if (typeDefOrRefSig.IsTypeDef)
-                        {
-                            typeDefOrRefSig.TypeDef.Namespace = UpdateName(typeDefOrRefSig.Namespace, () => modifiedAttributesParameters++);
-                        } else if (typeDefOrRefSig.IsTypeRef)
-                        {
-                            typeDefOrRefSig.TypeRef.Namespace = UpdateName(typeDefOrRefSig.Namespace, () => modifiedAttributesParameters++);
-                        }
-                    }
-                }
-            }
-
-            Log.Info($"Modified {modifiedAttributesParameters} attribute parameter(s)");
-
             Log.Info("Updating assembly name");
             if (_commandLineOptions.ReplaceAssemblyName) {
                 assembly.Name = UpdateName(assembly.Name, () => Log.Info("Assembly name modified"));
+
+                for (int i = 0; i < assembly.Modules.Count; i++) {
+                    ModuleDef moduleDef = assembly.Modules[i];
+                    int finalI = i;
+                    moduleDef.Name = UpdateName(moduleDef.Name, () => Log.Info($"Module {finalI} name modified"));
+                }
             }
 
             Log.Info("Modifying types");
@@ -158,6 +121,72 @@ namespace LostPolygon.AssemblyNamespaceChanger {
                 Log.Info($"Modified {modifiedReferences} assembly reference(s)");
             }
 
+            Log.Info("Updating attributes");
+
+            HashSet<CustomAttribute> customAttributes = new HashSet<CustomAttribute>();
+            customAttributes.UnionWith(module.CustomAttributes);
+            customAttributes.UnionWith(assembly.CustomAttributes);
+
+            foreach (TypeDef type in types) {
+                customAttributes.UnionWith(type.CustomAttributes);
+                type.Events.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
+                type.Fields.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
+                type.Interfaces.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
+                type.Methods.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
+                type.GenericParameters.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
+                type.Properties.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
+
+                foreach (MethodDef method in type.Methods) {
+                    method.GenericParameters.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
+                    method.Parameters.ToList()
+                        .ForEach(m => {
+                            if (m.HasParamDef) {
+                                customAttributes.UnionWith(m.ParamDef.CustomAttributes);
+                            }
+                        });
+                }
+            }
+
+            int modifiedAttributesParameters = 0;
+            bool isAttributeModified = false;
+
+            void UpdateTypeDefOrRefSig(TypeDefOrRefSig type) {
+                if (type.IsTypeDef) {
+                    type.TypeDef.Namespace = UpdateName(type.Namespace, () => isAttributeModified = true);
+
+                    if (type.TypeDef.Scope is AssemblyRefUser assemblyRefUser) {
+                        assemblyRefUser.Name = UpdateName(assemblyRefUser.Name, () => isAttributeModified = true);
+                    }
+                } else if (type.IsTypeRef) {
+                    type.TypeRef.Namespace = UpdateName(type.Namespace, () => isAttributeModified = true);
+                    if (type.TypeRef.Scope is AssemblyRefUser assemblyRefUser) {
+                        assemblyRefUser.Name = UpdateName(assemblyRefUser.Name, () => isAttributeModified = true);
+                    }
+                }
+            }
+
+            foreach (CustomAttribute customAttribute in customAttributes) {
+                isAttributeModified = false;
+                IEnumerable<CAArgument> constructorArguments =
+                    customAttribute.ConstructorArguments.Concat(customAttribute.NamedArguments.Select(na => na.Argument));
+
+                foreach (CAArgument attributeConstructorArgument in constructorArguments) {
+                    if (attributeConstructorArgument.Type is TypeDefOrRefSig typeType) {
+                        UpdateTypeDefOrRefSig(typeType);
+                    }
+
+                    if (attributeConstructorArgument.Value is TypeDefOrRefSig valueType) {
+                        UpdateTypeDefOrRefSig(valueType);
+                    }
+                }
+
+                if (isAttributeModified) {
+                    modifiedAttributesParameters++;
+                }
+            }
+
+            Log.Info($"Modified {modifiedAttributesParameters} attribute parameter(s)");
+
             string outputPath;
             if (!String.IsNullOrWhiteSpace(_commandLineOptions.OutputAssemblyPath)) {
                 outputPath = _commandLineOptions.OutputAssemblyPath;
@@ -182,7 +211,9 @@ namespace LostPolygon.AssemblyNamespaceChanger {
             string assemblyVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
 
             HelpText helpText =
-                _commandLineParserResult.Tag == ParserResultType.NotParsed ? HelpText.AutoBuild(_commandLineParserResult) : HelpText.AutoBuild(_commandLineParserResult, text => text, example => example);
+                _commandLineParserResult.Tag == ParserResultType.NotParsed
+                    ? HelpText.AutoBuild(_commandLineParserResult)
+                    : HelpText.AutoBuild(_commandLineParserResult, text => text, example => example);
             helpText.AddEnumValuesToHelpText = true;
             helpText.AddDashesToOption = true;
             helpText.Heading =

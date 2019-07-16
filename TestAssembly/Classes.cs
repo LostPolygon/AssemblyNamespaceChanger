@@ -7,7 +7,7 @@ using Nice;
 
 namespace Nice
 {
-    [SomeType(typeof(Awesome))]
+    [SomeType(typeof(Awesome), MeaningfulEnum = SimpleEnum.Lol)]
     public class Foo
     {
         public class NestedBar {
@@ -22,10 +22,17 @@ namespace Neat {
             public void Foo([Cookie] string cookie) {
             }
         }
+
+        public enum SimpleEnum {
+            Foo,
+            Bar,
+            Lol
+        }
     }
 
     public class SomeTypeAttribute : Attribute {
         public Type TypeParameter;
+        public SimpleEnum MeaningfulEnum;
 
         public SomeTypeAttribute(Type typeParameter) {
             TypeParameter = typeParameter;

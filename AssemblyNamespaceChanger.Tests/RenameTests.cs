@@ -39,15 +39,20 @@ namespace AssemblyNamespaceChanger.Tests {
                         InputAssemblyPath = inputAsmPath,
                         OutputAssemblyPath = outputAsmPath,
                         ReplaceAssemblyReferences = true,
-                        Regexps = new []{ "^Neat", "Test", "^System.Web", "Foo.System.Web" }
+                        ReplaceAssemblyName = true,
+                        Regexps = new [] {
+                            "^Neat", "Test",
+                            "^System.Web", "Foo.System.Web",
+                            "TestAssembly", "SuperAssembly"
+                        }
                     });
 
             string[] argumentsSplit = arguments.Split(' ');
 
-
             LostPolygon.AssemblyNamespaceChanger.AssemblyNamespaceChanger.Run(argumentsSplit);
 
             AssemblyDefinition output = AssemblyDefinition.ReadAssembly(outputAsmPath);
+            Assert.AreEqual("SuperAssembly", output.Name.Name);
             output.AssertNoClass("Neat.Cool.Awesome");
             output.AssertClass("Test.Cool.Awesome");
             output.AssertClass("Nice.Foo");
