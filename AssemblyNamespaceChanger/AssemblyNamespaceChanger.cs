@@ -7,9 +7,8 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using CommandLine;
 using CommandLine.Text;
+using dnlib.DotNet;
 using log4net;
-using Mono.Cecil;
-using Mono.Cecil.Rocks;
 
 namespace LostPolygon.AssemblyNamespaceChanger {
     class AssemblyNamespaceChanger {
@@ -76,18 +75,19 @@ namespace LostPolygon.AssemblyNamespaceChanger {
 
             Log.Info($"Reading assembly from {_commandLineOptions.InputAssemblyPath}");
 
-            AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(_commandLineOptions.InputAssemblyPath);
-            TypeDefinition[] types = assembly.MainModule.GetAllTypes().ToArray();
-            TypeReference[] typeReferences = assembly.MainModule.GetTypeReferences().ToArray();
+            ModuleDefMD module = ModuleDefMD.Load(_commandLineOptions.InputAssemblyPath);
+            AssemblyDef assembly = module.Assembly;
+            TypeDef[] types = module.GetTypes().ToArray();
+            TypeRef[] typeReferences = module.GetTypeRefs().ToArray();
+            AssemblyRef[] assemblyReferences = module.GetAssemblyRefs().ToArray();
 
             Log.Info("Updating attributes");
 
-            // Just touch all the attributes, this is enough for Mono.Cecil to fix them
             HashSet<CustomAttribute> customAttributes = new HashSet<CustomAttribute>();
+            customAttributes.UnionWith(module.CustomAttributes);
             customAttributes.UnionWith(assembly.CustomAttributes);
-            customAttributes.UnionWith(assembly.MainModule.GetCustomAttributes());
 
-            foreach (TypeDefinition type in types) {
+            foreach (TypeDef type in types) {
                 customAttributes.UnionWith(type.CustomAttributes);
                 type.Events.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
                 type.Fields.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
@@ -96,17 +96,28 @@ namespace LostPolygon.AssemblyNamespaceChanger {
                 type.GenericParameters.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
                 type.Properties.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
 
-                foreach (MethodDefinition method in type.Methods) {
+                foreach (MethodDef method in type.Methods) {
                     method.GenericParameters.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
-                    method.Parameters.ToList().ForEach(m => customAttributes.UnionWith(m.CustomAttributes));
+                    method.Parameters.ToList().ForEach(m => {
+                        if (m.HasParamDef)
+                        {
+                            customAttributes.UnionWith(m.ParamDef.CustomAttributes);
+                        }
+                    });
                 }
             }
 
             int modifiedAttributesParameters = 0;
             foreach (CustomAttribute customAttribute in customAttributes) {
-                foreach (CustomAttributeArgument attributeConstructorArgument in customAttribute.ConstructorArguments) {
-                    if (!(attributeConstructorArgument.Value is TypeSpecification) && attributeConstructorArgument.Value is TypeReference typeReference) {
-                        typeReference.Namespace = UpdateName(typeReference.Namespace, () => modifiedAttributesParameters++);
+                foreach (CAArgument attributeConstructorArgument in customAttribute.ConstructorArguments) {
+                    if (attributeConstructorArgument.Value is TypeDefOrRefSig typeDefOrRefSig) {
+                        if (typeDefOrRefSig.IsTypeDef)
+                        {
+                            typeDefOrRefSig.TypeDef.Namespace = UpdateName(typeDefOrRefSig.Namespace, () => modifiedAttributesParameters++);
+                        } else if (typeDefOrRefSig.IsTypeRef)
+                        {
+                            typeDefOrRefSig.TypeRef.Namespace = UpdateName(typeDefOrRefSig.Namespace, () => modifiedAttributesParameters++);
+                        }
                     }
                 }
             }
@@ -115,13 +126,13 @@ namespace LostPolygon.AssemblyNamespaceChanger {
 
             Log.Info("Updating assembly name");
             if (_commandLineOptions.ReplaceAssemblyName) {
-                assembly.Name.Name = UpdateName(assembly.Name.Name, () => Log.Info("Assembly name modified"));
+                assembly.Name = UpdateName(assembly.Name, () => Log.Info("Assembly name modified"));
             }
 
             Log.Info("Modifying types");
 
             int modifiedTypes = 0;
-            foreach (TypeDefinition type in types) {
+            foreach (TypeDef type in types) {
                 type.Namespace = UpdateName(type.Namespace, () => modifiedTypes++);
             }
 
@@ -130,7 +141,7 @@ namespace LostPolygon.AssemblyNamespaceChanger {
             Log.Info("Modifying type references");
 
             int modifiedTypeReferences = 0;
-            foreach (TypeReference typeReference in typeReferences) {
+            foreach (TypeRef typeReference in typeReferences) {
                 typeReference.Namespace = UpdateName(typeReference.Namespace, () => modifiedTypeReferences++);
             }
 
@@ -140,7 +151,7 @@ namespace LostPolygon.AssemblyNamespaceChanger {
                 Log.Info("Modifying assembly references");
 
                 int modifiedReferences = 0;
-                foreach (AssemblyNameReference assemblyReference in assembly.MainModule.AssemblyReferences) {
+                foreach (AssemblyRef assemblyReference in assemblyReferences) {
                     assemblyReference.Name = UpdateName(assemblyReference.Name, () => modifiedReferences++);
                 }
 
